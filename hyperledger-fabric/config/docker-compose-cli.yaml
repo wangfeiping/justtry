@@ -1,0 +1,75 @@
+# Copyright justtry.com Corp. All Rights Reserved.
+#
+
+version: '2'
+
+services:
+
+  orderer.justtry.com:
+    extends:
+      file:   base/docker-compose-base.yaml
+      service: orderer.justtry.com
+    container_name: orderer.justtry.com
+    bindIp: 172.28.32.205
+    
+  peer0.org1.justtry.com:
+    container_name: peer0.org1.justtry.com
+    extends:
+      file:  base/docker-compose-base.yaml
+      service: peer0.org1.justtry.com
+    bindIp: 172.28.32.202
+
+  peer1.org1.justtry.com:
+    container_name: peer1.org1.justtry.com
+    extends:
+      file:  base/docker-compose-base.yaml
+      service: peer1.org1.justtry.com
+    bindIp: 172.28.32.203
+
+  peer0.org2.justtry.com:
+    container_name: peer0.org2.justtry.com
+    extends:
+      file:  base/docker-compose-base.yaml
+      service: peer0.org2.justtry.com
+    bindIp: 172.28.32.205
+
+  peer1.org2.justtry.com:
+    container_name: peer1.org2.justtry.com
+    extends:
+      file:  base/docker-compose-base.yaml
+      service: peer1.org2.justtry.com
+    bindIp: 172.28.32.206
+
+  cli:
+    container_name: cli
+    image: hyperledger/fabric-tools:x86_64-1.1.0
+    tty: true
+    environment:
+      - GOPATH=/opt/gopath
+      # - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      # - CORE_VM_ENDPOINT=unix:///var/run/docker.sock
+      - CORE_LOGGING_LEVEL=DEBUG
+      - CORE_PEER_ID=cli
+      - CORE_PEER_ADDRESS=peer0.org1.justtry.com:7051
+      - CORE_PEER_LOCALMSPID=Org1MSP
+      - CORE_PEER_TLS_ENABLED=false
+      - CORE_PEER_TLS_CERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.justtry.com/peers/peer0.org1.justtry.com/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.justtry.com/peers/peer0.org1.justtry.com/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.justtry.com/peers/peer0.org1.justtry.com/tls/ca.crt
+      - CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.justtry.com/users/Admin@org1.justtry.com/msp
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: /bin/bash -c './scripts/script.sh ${CHANNEL_NAME}; sleep $TIMEOUT; tail -f /dev/null'
+    # command: tail -f /dev/null
+    volumes:
+        - /var/run/:/host/var/run/
+        - /apps/justtry/chaincode/go/:/opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/go
+        - /apps/justtry/config/crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/
+        - /apps/justtry/scripts:/opt/gopath/src/github.com/hyperledger/fabric/peer/scripts/
+        - /apps/justtry/config/channel-artifacts:/opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts
+    depends_on:
+      - orderer.justtry.com
+      - peer0.org1.justtry.com
+      - peer1.org1.justtry.com
+      - peer0.org2.justtry.com
+      - peer1.org2.justtry.com
+    bindIp: 172.28.32.202
