@@ -16,7 +16,9 @@ CHANNEL_NAME="$1"
 : ${TIMEOUT:="60"}
 COUNTER=1
 MAX_RETRY=5
-ORDERER_CA=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/justtry.com/orderers/orderer.justtry.com/msp/cacerts/ca.justtry.com-cert.pem
+#ORDERER_CA=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/justtry.com/orderers/orderer.justtry.com/msp/cacerts/ca.justtry.com-cert.pem
+# TLS
+ORDERER_CA=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/justtry.com/orderers/orderer.justtry.com/msp/tlscacerts/tlsca.justtry.com-cert.pem
 
 echo "Channel name : "$CHANNEL_NAME
 

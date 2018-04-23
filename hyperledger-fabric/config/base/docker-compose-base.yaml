@@ -16,7 +16,7 @@ services:
       - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
       - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
       # enabled TLS
-      - ORDERER_GENERAL_TLS_ENABLED=false
+      - ORDERER_GENERAL_TLS_ENABLED=true
       - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
       - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
       - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
@@ -42,6 +42,7 @@ services:
         - /var/run/:/host/var/run/
         - /apps/justtry/config/crypto-config/peerOrganizations/org1.justtry.com/peers/peer0.org1.justtry.com/msp:/etc/hyperledger/fabric/msp
         - /apps/justtry/config/crypto-config/peerOrganizations/org1.justtry.com/peers/peer0.org1.justtry.com/tls:/etc/hyperledger/fabric/tls
+        #- /apps/justtry/config/crypto-config/peerOrganizations/org1.justtry.com/users/Admin@org1.justtry.com/msp:/etc/hyperledger/users/Admin/msp
 
   peer1.org1.justtry.com:
     container_name: peer1.org1.justtry.com
