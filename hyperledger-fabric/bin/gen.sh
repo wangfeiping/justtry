@@ -52,7 +52,8 @@ function generateCerts (){
         echo "##########################################################"
         echo "##### Generate certificates using cryptogen tool #########"
         echo "##########################################################"
-        # crypto-config Ŀ¼�����û���ǰĿ¼�´�����Ϊ��ʹ�䴴����ָ��Ŀ¼��ʹ��cd ��ת��Ȼ���ڻص��û�ִ�е�Ŀ¼
+        # 生成的相关秘钥及证书等文件都会创建到当前目录下的crypto-config目录下，
+        # 因此cd 到希望指定的路径下，生成相关文件后再cd 回用户执行路径下。
         workPath=$PWD
         cd $CHAIN_CONFIG
         $CRYPTOGEN generate --config=$CHAIN_CONFIG/crypto-config.yaml
