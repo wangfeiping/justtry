@@ -41,7 +41,7 @@ setGlobals () {
                 if [ $1 -eq 0 ]; then
                         CORE_PEER_ADDRESS=peer0.org1.justtry.com:7051
                 else
-                        CORE_PEER_ADDRESS=peer1.org1.justtry.com:7051
+                        CORE_PEER_ADDRESS=peer91.org1.justtry.com:7051
                         CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.justtry.com/users/Admin@org1.justtry.com/msp
                 fi
         else
@@ -108,7 +108,7 @@ joinWithRetry () {
 }
 
 joinChannel () {
-        for ch in 0 1 2 3; do
+        for ch in 1; do
                 setGlobals $ch
                 joinWithRetry $ch
                 echo "===================== PEER$ch joined on the channel \"$CHANNEL_NAME\" ===================== "
@@ -221,26 +221,30 @@ chaincodeInvoke () {
 }
 
 ## Create channel
-echo "Creating channel..."
-createChannel
+#echo "Creating channel..."
+#createChannel
 
 ## Join all the peers to the channel
 echo "Having all peers join the channel..."
 joinChannel
 
 ## Set the anchor peers for each org in the channel
-echo "Updating anchor peers for org1..."
-updateAnchorPeers 0
-echo "Updating anchor peers for org2..."
-updateAnchorPeers 2
+#echo "Updating anchor peers for org1..."
+#updateAnchorPeers 0
+#echo "Updating anchor peers for org2..."
+#updateAnchorPeers 2
 
-echo "Install chaincode qbcc on org0/peer1..."
-installChaincodeQbcc 0
+#echo "Install chaincode qbcc on org0/peer1..."
+#installChaincodeQbcc 0
+echo "Install chaincode qbcc on org0/peer91..."
+installChaincodeQbcc 1
 #echo "Install chaincode qbcc on org2/peer2..."
 #installChaincodeQbcc 2
 
-echo "Instantiating chaincode qbcc on org0/peer1..."
-instantiateChaincodeQbcc 0
+#echo "Instantiating chaincode qbcc on org0/peer1..."
+#instantiateChaincodeQbcc 0
+echo "Instantiating chaincode qbcc on org0/peer91..."
+instantiateChaincodeQbcc 1
 # echo "Instantiating chaincode qbcc on org2/peer2..."
 # instantiateChaincodeQbcc 2
 

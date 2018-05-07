@@ -247,9 +247,9 @@ $ ./fabric-ca-client register --id.name peer9 --id.type peer --id.affiliation or
 背书（获取证书及秘钥）
 $ ./fabric-ca-client enroll -u http://peer91:XEprggyNDLkB@ca.org1.justtry.com:7054 -M /apps/justtry/peer91msp
 
+需要复制能够将peer 加入到channel 的管理员证书
 $ mkdir /apps/justtry/peer91msp/admincerts
-
-$ cp /apps/justtry/peer91msp/signcerts/cert.pem /apps/justtry/peer91msp/admincerts/
+$ cp config/crypto-config/peerOrganizations/org1.justtry.com/peers/peer0.org1.justtry.com/msp/admincerts/Admin\@org1.justtry.com-cert.pem ./peer91msp/admincerts/
 
 启动peer91 节点容器
 
@@ -277,4 +277,5 @@ docker run -d \
     -e CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer91.org1.justtry.com:7051 \
     -e CORE_PEER_LOCALMSPID=Org1MSP \
     hyperledger/fabric-peer:x86_64-1.1.0 peer node start
+
 ```
