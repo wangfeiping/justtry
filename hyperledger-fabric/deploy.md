@@ -139,16 +139,16 @@ true
 $ rm -rf /var/lib/mesos/*
 
 修改work_dir 路径
-vi /etc/mesos-slave/work_dir
+$ vi /etc/mesos-slave/work_dir
 修改containerizers 路径
-echo 'docker,mesos' > /etc/mesos-slave/containerizers
+$ echo 'docker,mesos' > /etc/mesos-slave/containerizers
 or
-vi /etc/mesos-slave/containerizers
+$ vi /etc/mesos-slave/containerizers
 
 启动mesos master
-systemctl start mesos-master
+$ systemctl start mesos-master
 
-systemctl start mesos-slave
+$ systemctl start mesos-slave
 
 访问
 http://{ip}:5050/
@@ -159,21 +159,23 @@ http://{ip}:5050/
 域名绑定
 
 ```
-vi /etc/hosts
+$ vi /etc/hosts
 
 172.28.32.205 orderer.justtry.com
 172.28.32.202 peer0.org1.justtry.com
 172.28.32.203 peer1.org1.justtry.com
 172.28.32.205 peer0.org2.justtry.com
 172.28.32.206 peer1.org2.justtry.com
-
+172.28.32.207 peer91.org2.justtry.com
+172.28.32.207 ca.justtry.com
+172.28.32.207 zk.justtry.com
 ```
 
-mkdir -p /apps/justtry
+$ mkdir -p /apps/justtry
 
 ### 生成秘钥，证书及初始块等文件
 
-sh gen.sh
+$ sh gen.sh
 
 ### 更换域名（目前为justtry.com）
 
@@ -187,10 +189,28 @@ sh gen.sh
 > ./config/base/docker-compose-base.yaml
 > ./config/base/peer-base.yaml
 
+### 配置是否使用TLS
+
+> ./config/docker-compose-cli.yaml
+
+- CORE_PEER_TLS_ENABLED=false
+
+> ./config/base/peer-base.yaml
+
+- CORE_PEER_TLS_ENABLED=false
+
+> ./config/base/docker-compose-base.yaml
+
+- ORDERER_GENERAL_TLS_ENABLED=false
+
+> ./scripts/script.sh
+
+ORDERER_CA=******
+
 ### 配置系统环境变量
 
 ```
-vi /etc/profile
+$ vi /etc/profile
 
 export KOYNARE_MESOS_MASTER=172.28.32.202:5050
 export KOYNARE_YAML=/apps/justtry/config/docker-compose-cli.yaml
@@ -198,4 +218,63 @@ export KOYNARE_MEM=400
 
 ```
 
+### fabric-ca 部署及功能测试
 
+```
+部署
+
+$ docker run -d --name ca \
+    -p 7054:7054 \
+    -v /etc/hosts:/etc/hosts \
+    -v /apps/justtry/:/apps/justtry/ \
+    -v /apps/justtry/config/crypto-config/peerOrganizations/org1.justtry.com/ca/:/etc/hyperledger/ca/ \
+    -v /apps/justtry/fabric-ca-server-config.yaml:/etc/hyperledger/fabric-ca-server/fabric-ca-server-config.yaml \
+    -e CA_CERT_FILE=/etc/hyperledger/ca/ca.org1.justtry.com-cert.pem \
+    -e CA_KEY_FILE=/etc/hyperledger/ca/9670cf768a18dbb4aa182090fb27313858398c5066efa314688a16dca014fdfd_sk \
+    hyperledger/fabric-ca:x86_64-1.1.0 \
+    sh -c 'fabric-ca-server start --ca.certfile ${CA_CERT_FILE} --ca.keyfile ${CA_KEY_FILE} -b admin:adminpw -d'
+
+测试
+
+为支持自定义域名需要修改配置fabric-ca-server-config.yaml
+affiliations:
+   org1:
+      - justtry.com
+注册管理员
+$ ./fabric-ca-client enroll -u http://admin:adminpw@ca.org1.justtry.com:7054
+注册新账户
+$ ./fabric-ca-client register --id.name peer9 --id.type peer --id.affiliation org1.justtry.com --id.attrs 'hf.Revoker=true,foo=bar'
+背书（获取证书及秘钥）
+$ ./fabric-ca-client enroll -u http://peer91:XEprggyNDLkB@ca.org1.justtry.com:7054 -M /apps/justtry/peer91msp
+
+$ mkdir /apps/justtry/peer91msp/admincerts
+
+$ cp /apps/justtry/peer91msp/signcerts/cert.pem /apps/justtry/peer91msp/admincerts/
+
+启动peer91 节点容器
+
+docker run -d \
+    -w /opt/gopath/src/github.com/hyperledger/fabric/peer \
+    --name=peer91.org1.justtry.com \
+    --restart=unless-stopped \
+    --net=host \
+    -v /etc/hosts:/etc/hosts \
+    -v /var/run/:/host/var/run/ \
+    -v /apps/justtry/peer91msp:/etc/hyperledger/fabric/msp \
+    -v /apps/justtry/peer91msp/tls:/etc/hyperledger/fabric/tls \
+    -e CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock \
+    -e CORE_LOGGING_LEVEL=DEBUG \
+    -e CORE_PEER_ENDORSER_ENABLED=true \
+    -e CORE_PEER_GOSSIP_USELEADERELECTION=true \
+    -e CORE_PEER_GOSSIP_ORGLEADER=false \
+    -e CORE_PEER_PROFILE_ENABLED=false \
+    -e CORE_PEER_TLS_ENABLED=false \
+    -e CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt \
+    -e CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt \
+    -e CORE_PEER_ID=peer91.org1.justtry.com \
+    -e CORE_PEER_ADDRESS=peer91.org1.justtry.com:7051 \
+    -e CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer91.org1.justtry.com:7051 \
+    -e CORE_PEER_LOCALMSPID=Org1MSP \
+    hyperledger/fabric-peer:x86_64-1.1.0 peer node start
+```
