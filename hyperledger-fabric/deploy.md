@@ -166,8 +166,9 @@ $ vi /etc/hosts
 172.28.32.203 peer1.org1.justtry.com
 172.28.32.205 peer0.org2.justtry.com
 172.28.32.206 peer1.org2.justtry.com
-172.28.32.207 peer91.org2.justtry.com
-172.28.32.207 ca.justtry.com
+172.28.32.207 peer9.org1.justtry.com
+172.28.32.207 ca.org1.justtry.com
+172.28.32.207 tlsca.org1.justtry.com
 172.28.32.207 zk.justtry.com
 ```
 
@@ -221,7 +222,7 @@ export KOYNARE_MEM=400
 ### fabric-ca 部署及功能测试
 
 ```
-部署
+部署非TLS ca
 
 $ docker run -d --name ca \
     -p 7054:7054 \
@@ -245,23 +246,23 @@ $ ./fabric-ca-client enroll -u http://admin:adminpw@ca.org1.justtry.com:7054
 注册新账户
 $ ./fabric-ca-client register --id.name peer9 --id.type peer --id.affiliation org1.justtry.com --id.attrs 'hf.Revoker=true,foo=bar'
 背书（获取证书及秘钥）
-$ ./fabric-ca-client enroll -u http://peer91:XEprggyNDLkB@ca.org1.justtry.com:7054 -M /apps/justtry/peer91msp
+$ ./fabric-ca-client enroll -u http://peer9:mYvVxkgeNPTX@ca.org1.justtry.com:7054 -M /apps/justtry/peer9msp
 
 需要复制能够将peer 加入到channel 的管理员证书
-$ mkdir /apps/justtry/peer91msp/admincerts
-$ cp config/crypto-config/peerOrganizations/org1.justtry.com/peers/peer0.org1.justtry.com/msp/admincerts/Admin\@org1.justtry.com-cert.pem ./peer91msp/admincerts/
+$ mkdir /apps/justtry/peer9msp/admincerts
+$ cp config/crypto-config/peerOrganizations/org1.justtry.com/peers/peer0.org1.justtry.com/msp/admincerts/Admin\@org1.justtry.com-cert.pem ./peer9msp/admincerts/
 
-启动peer91 节点容器
+启动peer9 节点容器
 
-docker run -d \
+$ docker run -d \
     -w /opt/gopath/src/github.com/hyperledger/fabric/peer \
-    --name=peer91.org1.justtry.com \
+    --name=peer9.org1.justtry.com \
     --restart=unless-stopped \
     --net=host \
     -v /etc/hosts:/etc/hosts \
     -v /var/run/:/host/var/run/ \
-    -v /apps/justtry/peer91msp:/etc/hyperledger/fabric/msp \
-    -v /apps/justtry/peer91msp/tls:/etc/hyperledger/fabric/tls \
+    -v /apps/justtry/peer9msp:/etc/hyperledger/fabric/msp \
+    -v /apps/justtry/peer9msp/tls:/etc/hyperledger/fabric/tls \
     -e CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock \
     -e CORE_LOGGING_LEVEL=DEBUG \
     -e CORE_PEER_ENDORSER_ENABLED=true \
@@ -272,9 +273,69 @@ docker run -d \
     -e CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt \
     -e CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key \
     -e CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt \
-    -e CORE_PEER_ID=peer91.org1.justtry.com \
-    -e CORE_PEER_ADDRESS=peer91.org1.justtry.com:7051 \
-    -e CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer91.org1.justtry.com:7051 \
+    -e CORE_PEER_ID=peer9.org1.justtry.com \
+    -e CORE_PEER_ADDRESS=peer9.org1.justtry.com:7051 \
+    -e CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer9.org1.justtry.com:7051 \
+    -e CORE_PEER_LOCALMSPID=Org1MSP \
+    hyperledger/fabric-peer:x86_64-1.1.0 peer node start
+
+```
+
+```
+部署TLS ca
+
+$ docker run -d --name ca \
+    -p 7054:7054 \
+    -v /etc/hosts:/etc/hosts \
+    -v /apps/justtry/:/apps/justtry/ \
+    -v /apps/justtry/config/crypto-config/peerOrganizations/org1.justtry.com/tlsca/:/etc/hyperledger/tlsca/ \
+    -v /apps/justtry/fabric-ca-server-config.yaml:/etc/hyperledger/fabric-ca-server/fabric-ca-server-config.yaml \
+    -e CA_CERT_FILE=/etc/hyperledger/tlsca/tlsca.org1.justtry.com-cert.pem \
+    -e CA_KEY_FILE=/etc/hyperledger/tlsca/b3974b49b3ef171cabe36d88920564356c9a44d80aebe6fab985b5f0f501c979_sk \
+    hyperledger/fabric-ca:x86_64-1.1.0 \
+    sh -c 'fabric-ca-server start --tls.enabled=false --ca.certfile ${CA_CERT_FILE} --ca.keyfile ${CA_KEY_FILE} -b admin:adminpw -d'
+
+注册管理员
+$ ./fabric-ca-client enroll -u http://admin:adminpw@tlsca.org1.justtry.com:7054
+注册新账户
+$ ./fabric-ca-client register --id.name peer9 --id.type peer --id.affiliation org1.justtry.com --id.attrs 'hf.Revoker=true,foo=bar'
+
+$ ./fabric-ca-client enroll -u http://peer9:ymHUYkeOKUWW@tlsca.org1.justtry.com:7054 -M /apps/justtry/peer9msp
+
+$ cp peer9msp/cacerts/tlsca-org1-justtry-com-7054.pem peer9msp/tls/ca.crt
+
+$ cp peer9msp/signcerts/cert.pem peer9msp/tls/server.crt
+
+$ cp peer9msp/keystore/e57eb26d923697a992e46d83e33caf406fb6c61dfd80574dc56019dc4c898d8c_sk peer9msp/tls/server.key
+
+可选，但如果有不能不可用？
+$ rm -rf peer9msp/intermediatecerts/
+
+$ mkdir /apps/justtry/peer9msp/admincerts
+$ cp config/crypto-config/peerOrganizations/org1.justtry.com/peers/peer0.org1.justtry.com/msp/admincerts/Admin\@org1.justtry.com-cert.pem ./peer9msp/admincerts/
+
+$ docker run -d \
+    -w /opt/gopath/src/github.com/hyperledger/fabric/peer \
+    --name=peer9.org1.justtry.com \
+    --restart=unless-stopped \
+    --net=host \
+    -v /etc/hosts:/etc/hosts \
+    -v /var/run/:/host/var/run/ \
+    -v /apps/justtry/peer9msp:/etc/hyperledger/fabric/msp \
+    -v /apps/justtry/peer9msp/tls:/etc/hyperledger/fabric/tls \
+    -e CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock \
+    -e CORE_LOGGING_LEVEL=DEBUG \
+    -e CORE_PEER_ENDORSER_ENABLED=true \
+    -e CORE_PEER_GOSSIP_USELEADERELECTION=true \
+    -e CORE_PEER_GOSSIP_ORGLEADER=false \
+    -e CORE_PEER_PROFILE_ENABLED=false \
+    -e CORE_PEER_TLS_ENABLED=true \
+    -e CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt \
+    -e CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt \
+    -e CORE_PEER_ID=peer9.org1.justtry.com \
+    -e CORE_PEER_ADDRESS=peer9.org1.justtry.com:7051 \
+    -e CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer9.org1.justtry.com:7051 \
     -e CORE_PEER_LOCALMSPID=Org1MSP \
     hyperledger/fabric-peer:x86_64-1.1.0 peer node start
 
